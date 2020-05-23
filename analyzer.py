@@ -45,13 +45,18 @@ def initialize_mappings(d):
 
 def initialize_subscriptions(d, do, mapping):
     subs_dict = {}
+    subs_usages = {}
     for i, (name, value) in enumerate(do.items()):
         if value["SubscriptionGuid"] not in subs_dict:
             subs_dict[value["SubscriptionGuid"]] = {
                 "SubscriptionName": value["SubscriptionName"],
                 "SubscriptionGUID": value["SubscriptionGuid"],
             }
-    return subs_dict
+        if value["SubscriptionGuid"] not in subs_usages:
+            subs_usages[value["SubscriptionGuid"]] = 1
+        else:
+            subs_usages[value["SubscriptionGuid"]] += 1
+    return subs_dict, subs_usages
 
 
 def parse(d):
@@ -65,15 +70,14 @@ def parse(d):
     print(table.draw())
 
 
-def printSubscriptions(d):
+def print_subscriptions(d):
     do, mapping = initialize_mappings(d)
-    subs = initialize_subscriptions(d, do, mapping)
+    subs, usages = initialize_subscriptions(d, do, mapping)
     table = texttable.Texttable()
-    table.add_row(["#", "Name", "Identifier"])
+    table.add_row(["#", "Name", "Identifier", "Usages"])
     for i, (guid, value) in enumerate(subs.items()):
-        table.add_row([i, value["SubscriptionName"], guid])
+        table.add_row([i, value["SubscriptionName"], guid, usages[guid]])
     print(table.draw())
-
 
 
 def detail(id, d):
@@ -81,7 +85,9 @@ def detail(id, d):
     table = texttable.Texttable()
     table.add_row(["#", "Name", "Subscription", "Price per unit", "Quantity", "Price"])
     if len(mapping) > id >= 0:
-        table.add_row([id, do[mapping[id]]["ServiceName"], do[mapping[id]]["SubscriptionName"], do[mapping[id]]["Cost"] / do[mapping[id]]["Quantity"] if (do[mapping[id]]["Quantity"] > 0 and do[mapping[id]]["Cost"] > 0) else "N/A",
+        table.add_row([id, do[mapping[id]]["ServiceName"], do[mapping[id]]["SubscriptionName"],
+                       do[mapping[id]]["Cost"] / do[mapping[id]]["Quantity"] if (
+                                   do[mapping[id]]["Quantity"] > 0 and do[mapping[id]]["Cost"] > 0) else "N/A",
                        do[mapping[id]]["Quantity"], do[mapping[id]]["Cost"]])
     else:
         print("Id not found! Was the file changed since you retrieved the id?")
@@ -94,7 +100,7 @@ with open(json_path) as json_file:
     print("Parsing data from subscription \"" + data[0]["SubscriptionName"] + "\"...")
     if args.detail == -1:
         if args.subscriptions:
-            printSubscriptions(data)
+            print_subscriptions(data)
         else:
             parse(data)
     else:
