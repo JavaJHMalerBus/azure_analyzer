@@ -19,6 +19,9 @@ parser.add_argument('--detail', action='store', default=-1, type=int, help='Show
                                                                            'parameter '
                                                                            ' is left out.')
 
+parser.add_argument('--subscriptions', action='store_true', help='Lists all subscriptions that were found within the '
+                                                                 'file.')
+
 args = parser.parse_args()
 
 json_path = args.path if args.path != '' else filedialog.askopenfilename()
@@ -40,6 +43,17 @@ def initialize_mappings(d):
     return do, mapping
 
 
+def initialize_subscriptions(d, do, mapping):
+    subs_dict = {}
+    for i, (name, value) in enumerate(do.items()):
+        if value["SubscriptionGuid"] not in subs_dict:
+            subs_dict[value["SubscriptionGuid"]] = {
+                "SubscriptionName": value["SubscriptionName"],
+                "SubscriptionGUID": value["SubscriptionGuid"],
+            }
+    return subs_dict
+
+
 def parse(d):
     do, mapping = initialize_mappings(d)
     table = texttable.Texttable()
@@ -49,6 +63,17 @@ def parse(d):
                        value["Cost"] / value["Quantity"] if (value["Quantity"] > 0 and value["Cost"] > 0) else "N/A",
                        value["Quantity"], value["Cost"]])
     print(table.draw())
+
+
+def printSubscriptions(d):
+    do, mapping = initialize_mappings(d)
+    subs = initialize_subscriptions(d, do, mapping)
+    table = texttable.Texttable()
+    table.add_row(["#", "Name", "Identifier"])
+    for i, (guid, value) in enumerate(subs.items()):
+        table.add_row([i, value["SubscriptionName"], guid])
+    print(table.draw())
+
 
 
 def detail(id, d):
@@ -68,6 +93,9 @@ with open(json_path) as json_file:
     data = json.load(json_file)
     print("Parsing data from subscription \"" + data[0]["SubscriptionName"] + "\"...")
     if args.detail == -1:
-        parse(data)
+        if args.subscriptions:
+            printSubscriptions(data)
+        else:
+            parse(data)
     else:
         detail(args.detail, data)
