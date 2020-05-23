@@ -21,6 +21,7 @@ parser.add_argument('--detail', action='store', default=-1, type=int, help='Show
 
 parser.add_argument('--subscriptions', action='store_true', help='Lists all subscriptions that were found within the '
                                                                  'file.')
+parser.add_argument('--group', action='store_true', help='Groups the overview by subscriptions.')
 
 args = parser.parse_args()
 
@@ -43,7 +44,7 @@ def initialize_mappings(d):
     return do, mapping
 
 
-def initialize_subscriptions(d, do, mapping):
+def initialize_subscriptions(do):
     subs_dict = {}
     subs_usages = {}
     for i, (name, value) in enumerate(do.items()):
@@ -59,20 +60,41 @@ def initialize_subscriptions(d, do, mapping):
     return subs_dict, subs_usages
 
 
-def parse(d):
+def group_by_subscription(do):
+    res = {}
+    for i, (name, value) in enumerate(do.items()):
+        if value["SubscriptionGuid"] not in res:
+            res[value["SubscriptionGuid"]] = [value]
+        else:
+            res[value["SubscriptionGuid"]].append(value)
+    return res
+
+
+def parse(d, group_by_sub=False):
     do, mapping = initialize_mappings(d)
     table = texttable.Texttable()
     table.add_row(["#", "Name", "Price per unit", "Quantity", "Price"])
-    for i, (name, value) in enumerate(do.items()):
-        table.add_row([i, value["ServiceName"],
-                       value["Cost"] / value["Quantity"] if (value["Quantity"] > 0 and value["Cost"] > 0) else "N/A",
-                       value["Quantity"], value["Cost"]])
+    if not group_by_sub:
+        for i, (name, value) in enumerate(do.items()):
+            table.add_row([i, value["ServiceName"],
+                           value["Cost"] / value["Quantity"] if (value["Quantity"] > 0 and value["Cost"] > 0) else "N/A",
+                           value["Quantity"], value["Cost"]])
+    else:
+        grouped = group_by_subscription(do)
+        i = 0
+        for x, (guid, items) in enumerate(grouped.items()):
+            for value in items:
+                table.add_row([i, value["ServiceName"],
+                               value["Cost"] / value["Quantity"] if (
+                                           value["Quantity"] > 0 and value["Cost"] > 0) else "N/A",
+                               value["Quantity"], value["Cost"]])
+                i += 1
     print(table.draw())
 
 
 def print_subscriptions(d):
     do, mapping = initialize_mappings(d)
-    subs, usages = initialize_subscriptions(d, do, mapping)
+    subs, usages = initialize_subscriptions(d)
     table = texttable.Texttable()
     table.add_row(["#", "Name", "Identifier", "Usages"])
     for i, (guid, value) in enumerate(subs.items()):
@@ -85,10 +107,12 @@ def detail(id, d):
     table = texttable.Texttable()
     table.add_row(["#", "Name", "Type", "Region", "Subscription", "Price per unit", "Quantity", "Price"])
     if len(mapping) > id >= 0:
-        table.add_row([id, do[mapping[id]]["ServiceName"], do[mapping[id]]["ServiceType"], do[mapping[id]]["ServiceRegion"], do[mapping[id]]["SubscriptionName"],
-                       do[mapping[id]]["Cost"] / do[mapping[id]]["Quantity"] if (
-                                   do[mapping[id]]["Quantity"] > 0 and do[mapping[id]]["Cost"] > 0) else "N/A",
-                       do[mapping[id]]["Quantity"], do[mapping[id]]["Cost"]])
+        table.add_row(
+            [id, do[mapping[id]]["ServiceName"], do[mapping[id]]["ServiceType"], do[mapping[id]]["ServiceRegion"],
+             do[mapping[id]]["SubscriptionName"],
+             do[mapping[id]]["Cost"] / do[mapping[id]]["Quantity"] if (
+                     do[mapping[id]]["Quantity"] > 0 and do[mapping[id]]["Cost"] > 0) else "N/A",
+             do[mapping[id]]["Quantity"], do[mapping[id]]["Cost"]])
     else:
         print("Id not found! Was the file changed since you retrieved the id?")
         return
@@ -102,6 +126,6 @@ with open(json_path) as json_file:
         if args.subscriptions:
             print_subscriptions(data)
         else:
-            parse(data)
+            parse(data, args.group)
     else:
         detail(args.detail, data)
