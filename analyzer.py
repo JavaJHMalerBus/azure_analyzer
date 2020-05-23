@@ -83,9 +83,9 @@ def print_subscriptions(d):
 def detail(id, d):
     do, mapping = initialize_mappings(d)
     table = texttable.Texttable()
-    table.add_row(["#", "Name", "Subscription", "Price per unit", "Quantity", "Price"])
+    table.add_row(["#", "Name", "Type", "Region", "Subscription", "Price per unit", "Quantity", "Price"])
     if len(mapping) > id >= 0:
-        table.add_row([id, do[mapping[id]]["ServiceName"], do[mapping[id]]["SubscriptionName"],
+        table.add_row([id, do[mapping[id]]["ServiceName"], do[mapping[id]]["ServiceType"], do[mapping[id]]["ServiceRegion"], do[mapping[id]]["SubscriptionName"],
                        do[mapping[id]]["Cost"] / do[mapping[id]]["Quantity"] if (
                                    do[mapping[id]]["Quantity"] > 0 and do[mapping[id]]["Cost"] > 0) else "N/A",
                        do[mapping[id]]["Quantity"], do[mapping[id]]["Cost"]])
