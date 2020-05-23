@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import json
 import tkinter as tk
 from tkinter import filedialog
